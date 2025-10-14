@@ -1,36 +1,42 @@
 name: Extract PDF Data and Commit
 
 on:
-  workflow_dispatch:  # manual trigger recommended to avoid infinite push loop
+  workflow_dispatch:  # manual trigger recommended to avoid push loop
 
 jobs:
   extract-and-commit:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Checkout repo with PAT
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
-          persist-credentials: true  # important for push
+          token: ${{ secrets.GH_TOKEN }}
 
+      # 2️⃣ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pymupdf pandas openpyxl
 
+      # 4️⃣ Make sure folders exist
       - name: Create folders
         run: |
           mkdir -p ./nid
           mkdir -p ./portraits
           mkdir -p ./fingerprints
 
-      - name: Run extraction script
+      # 5️⃣ Run extraction script
+      - name: Run PDF extraction
         run: python extract_pdf.py
 
+      # 6️⃣ Commit & push extracted files
       - name: Commit and push extracted files
         run: |
           git config user.name "github-actions[bot]"
