@@ -5,7 +5,7 @@ import pandas as pd
 
 # ===== CONFIG =====
 input_folder = "./nid"          # PDFs folder
-output_excel = "./nid/output.xlsx"  # Excel will go to nid/
+output_excel = "./nid/output.xlsx"
 portraits_folder = "./portraits"
 fingerprints_folder = "./fingerprints"
 
@@ -21,10 +21,23 @@ patterns = {
     "Birth Registration No": re.compile(r"Birth\s*Registration\s*No\s*[: ]*\s*([0-9]+)", re.IGNORECASE),
 }
 
+# Load existing Excel if exists
+existing_records = {}
+if os.path.exists(output_excel):
+    df_existing = pd.read_excel(output_excel)
+    for idx, row in df_existing.iterrows():
+        existing_records[row["File Name"]] = row.to_dict()
+
 results = []
 
 for filename in sorted(os.listdir(input_folder)):
     if not filename.lower().endswith(".pdf"):
+        continue
+
+    # Skip already processed PDFs
+    if filename in existing_records:
+        print(f"⏭ Skipping {filename}, already processed")
+        results.append(existing_records[filename])
         continue
 
     pdf_path = os.path.join(input_folder, filename)
@@ -54,7 +67,7 @@ for filename in sorted(os.listdir(input_folder)):
             if m:
                 record[key] = m.group(1).strip()
 
-        # Extract images
+        # Extract images only if missing
         images = []
         for page in doc:
             for img in page.get_images(full=True):
@@ -71,8 +84,10 @@ for filename in sorted(os.listdir(input_folder)):
 
                 img_name = f"{pdf_basename}_{len(images)+1}.{ext}"
                 img_path = os.path.join(folder, img_name)
-                with open(img_path, "wb") as f:
-                    f.write(img_data)
+
+                if not os.path.exists(img_path):
+                    with open(img_path, "wb") as f:
+                        f.write(img_data)
                 images.append(img_path)
 
         # Assign first to portrait, second to fingerprint
@@ -83,7 +98,7 @@ for filename in sorted(os.listdir(input_folder)):
 
     results.append(record)
 
-# Save to Excel inside nid folder
+# Save all records to Excel
 df = pd.DataFrame(results, columns=[
     "File Name", "National ID", "PIN", "Date of Birth",
     "Name (English)", "Birth Registration No",
@@ -93,5 +108,5 @@ df.to_excel(output_excel, index=False)
 
 print("\n✅ Done!")
 print(f"Excel saved: {output_excel}")
-print(f"Portraits: {portraits_folder}")
-print(f"Fingerprints: {fingerprints_folder}")
+print(f"Portraits folder: {portraits_folder}")
+print(f"Fingerprints folder: {fingerprints_folder}")
