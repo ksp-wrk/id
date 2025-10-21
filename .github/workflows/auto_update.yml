@@ -1,0 +1,35 @@
+name: Auto Update PSD
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"  # প্রতি 6 ঘন্টায় auto run হবে (তুমি চাইলে সময় বদলাতে পারো)
+
+jobs:
+  update-psd:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests Pillow
+
+      - name: Run PSD automation
+        run: python photopea_api.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Auto updated PSD and marked used images [skip ci]" || echo "No changes to commit"
+          git push
